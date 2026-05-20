@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0, minimum-scale=0.2">
+  <title>workfy . multimedia canvas</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <!-- LEFT CANVAS SECTION -->
+    <section class="canvas-panel">
+      <div class="canvas-header">
+        <h2><i class="fas fa-image"></i> multimedia canvas</h2>
+        <div class="canvas-controls">
+          <div class="zoom-controls">
+            <button class="zoom-btn" id="zoomOutBtn" title="Zoom out"><i class="fas fa-search-minus"></i></button>
+            <span class="zoom-level" id="zoomLevel">100%</span>
+            <button class="zoom-btn" id="zoomInBtn" title="Zoom in"><i class="fas fa-search-plus"></i></button>
+            <button class="zoom-btn" id="zoomResetBtn" title="Reset zoom"><i class="fas fa-expand"></i></button>
+          </div>
+          <button class="upload-btn" id="uploadImageBtn"><i class="fas fa-cloud-upload-alt"></i> image</button>
+          <button class="upload-btn" id="uploadVideoBtn"><i class="fas fa-video"></i> video</button>
+          <button class="sticky-btn" id="addStickyNoteBtn"><i class="fas fa-sticky-note"></i> sticky note</button>
+          <button class="clear-canvas-btn" id="clearCanvasBtn"><i class="fas fa-trash-alt"></i> clear all</button>
+        </div>
+      </div>
+      <div id="infiniteCanvas">
+        <div id="canvasDropZone" class="canvas-drop-zone"></div>
+      </div>
+      <input type="file" id="imageFileInput" accept="image/*" multiple>
+      <input type="file" id="videoFileInput" accept="video/*" multiple>
+    </section>
+
+    <!-- RIGHT WRITING PANEL -->
+    <section class="writing-panel">
+      <div class="writing-header">
+        <i class="fas fa-pen-fancy"></i>
+        <h2>story editor</h2>
+        <span class="save-indicator" id="saveStatus">📁 local</span>
+      </div>
+      <textarea id="storyTextarea" placeholder="Start writing your story here... ✍️"></textarea>
+      <div class="story-actions">
+        <div class="auto-save-note">
+          <i class="fas fa-save"></i> <span id="lastSavedText">auto-save on</span>
+        </div>
+        <div class="action-group">
+          <button class="btn" id="selectAllTextBtn"><i class="fas fa-check-double"></i> select all</button>
+          <button class="btn voice-btn" id="voiceRecordBtn"><i class="fas fa-microphone"></i> record</button>
+          <button class="btn btn-primary" id="manualSaveBtn"><i class="fas fa-download"></i> save now</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

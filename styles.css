@@ -1,0 +1,386 @@
+ * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      background: #1e1e2f;
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    #app {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ----- LEFT: ENDLESS CANVAS ----- */
+    .canvas-panel {
+      flex: 1 1 65%;
+      background: #2a2a3c;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      border-right: 2px solid #4a4a6a;
+      overflow: hidden;
+    }
+
+    .canvas-header {
+      padding: 10px 16px;
+      background: #232334;
+      color: #e0e0f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #4a4a6a;
+      flex-wrap: wrap;
+      gap: 10px;
+      z-index: 20;
+    }
+
+    .canvas-header h2 {
+      font-weight: 500;
+      font-size: 1.3rem;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .canvas-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #35355a;
+      padding: 4px 12px;
+      border-radius: 20px;
+      color: white;
+    }
+
+    .zoom-btn {
+      background: transparent;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 1.1rem;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background 0.2s;
+    }
+
+    .zoom-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .zoom-level {
+      font-size: 0.85rem;
+      min-width: 45px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .upload-btn, .sticky-btn {
+      background: #5b5b8c;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 24px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    .sticky-btn {
+      background: #b38b5b;
+    }
+    .sticky-btn:hover {
+      background: #c9a16f;
+    }
+
+    .upload-btn:hover {
+      background: #6f6fa0;
+    }
+
+    .clear-canvas-btn {
+      background: transparent;
+      border: 1px solid #b0b0d0;
+      color: #d0d0f0;
+      padding: 6px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      transition: 0.2s;
+    }
+
+    .clear-canvas-btn:hover {
+      background: #3e3e5a;
+      border-color: #c0c0ff;
+    }
+
+    #infiniteCanvas {
+      flex: 1;
+      width: 100%;
+      background: #2a2a3c;
+      background-image: 
+        linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
+      position: relative;
+      overflow: auto;
+      cursor: grab;
+      min-height: 0;
+    }
+
+    #infiniteCanvas:active {
+      cursor: grabbing;
+    }
+
+    .canvas-drop-zone {
+      width: 6000px;
+      height: 6000px;
+      position: relative;
+      transform-origin: 0 0;
+      transition: transform 0.05s ease-out;
+    }
+
+    /* draggable items (images, videos, sticky notes) */
+    .canvas-item {
+      position: absolute;
+      cursor: move;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      transition: border 0.15s, filter 0.15s;
+      user-select: none;
+      background: #1a1a2e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .canvas-item:hover {
+      border: 2px solid #ffbb88;
+      filter: brightness(1.1);
+      z-index: 10;
+    }
+
+    .canvas-item.dragging {
+      opacity: 0.8;
+      border: 2px dashed #ffaa33;
+      cursor: grabbing;
+    }
+
+    .delete-item-btn {
+      position: absolute;
+      top: -12px;
+      right: -12px;
+      background: #e05555;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 26px;
+      height: 26px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px black;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .canvas-item:hover .delete-item-btn {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* sticky note specific */
+    .sticky-note {
+      background: #fef9c3;
+      color: #1e1e2e;
+      padding: 12px;
+      font-family: 'Comic Sans MS', 'Segoe UI', cursive, sans-serif;
+      font-size: 16px;
+      border-radius: 6px;
+      min-width: 140px;
+      min-height: 100px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      outline: none;
+      box-shadow: 4px 4px 12px rgba(0,0,0,0.4);
+      border: 1px solid #e6d970;
+    }
+
+    /* video styling */
+    .canvas-video {
+      background: black;
+      object-fit: contain;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ----- RIGHT: STORY WRITING PANEL ----- */
+    .writing-panel {
+      flex: 0 0 35%;
+      min-width: 320px;
+      background: #262638;
+      display: flex;
+      flex-direction: column;
+      color: #e8e8f8;
+      border-left: 1px solid #4a4a6a;
+    }
+
+    .writing-header {
+      padding: 16px 18px;
+      background: #232334;
+      border-bottom: 1px solid #4a4a6a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .writing-header i {
+      font-size: 1.3rem;
+      color: #c0c0ff;
+    }
+
+    .writing-header h2 {
+      font-weight: 500;
+      font-size: 1.3rem;
+      margin-right: auto;
+    }
+
+    .save-indicator {
+      font-size: 0.8rem;
+      color: #a0a0c0;
+      background: #3a3a55;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    #storyTextarea {
+      flex: 1;
+      width: 100%;
+      background: #1e1e2e;
+      border: none;
+      resize: none;
+      padding: 20px;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: #f0f0ff;
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      outline: none;
+      border-bottom: 1px solid #3f3f5a;
+    }
+
+    #storyTextarea::placeholder {
+      color: #7c7c9a;
+      font-style: italic;
+    }
+
+    .story-actions {
+      padding: 12px 18px;
+      background: #232334;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .action-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .auto-save-note {
+      font-size: 0.8rem;
+      color: #b9b9d4;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn {
+      background: #4b4b70;
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.2s;
+    }
+
+    .btn-primary {
+      background: #6d6db0;
+    }
+
+    .btn-primary:hover {
+      background: #8383c9;
+    }
+
+    .btn:hover {
+      filter: brightness(1.15);
+    }
+
+    .voice-btn {
+      background: #c46b5b;
+    }
+    .voice-btn.recording {
+      background: #d32f2f;
+      animation: pulse 1.2s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
+    }
+
+    #imageFileInput, #videoFileInput {
+      display: none;
+    }
+
+    @media (max-width: 750px) {
+      body {
+        flex-direction: column;
+      }
+      #app {
+        flex-direction: column;
+      }
+      .writing-panel {
+        flex: 0 0 45%;
+        min-width: 100%;
+      }
+    }
