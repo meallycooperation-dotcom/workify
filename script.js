@@ -1,4 +1,4 @@
-(function() {
+﻿(function() {
       // ---------- STORAGE KEYS ----------
       const STORAGE_ITEMS = 'blog_canvas_items';
       const STORAGE_STORY = 'blog_workspace_story';
@@ -37,6 +37,13 @@
       let dragOffsetX = 0, dragOffsetY = 0;
       let currentDragId = null;
 
+      // Pan state
+      let isPanning = false;
+      let panStartX = 0;
+      let panStartY = 0;
+      let panStartScrollLeft = 0;
+      let panStartScrollTop = 0;
+
       // Voice recording state
       let mediaRecorder = null;
       let audioChunks = [];
@@ -56,6 +63,39 @@
         zoomLevelDisplay.textContent = Math.round(currentZoom * 100) + '%';
       }
 
+      function isStickyNoteEditable(item) {
+        if (!item || item.type !== 'sticky') return false;
+        if (item.editable === false) return false;
+        if (typeof item.content !== 'string') return true;
+        return !/<\s*audio\b|<\s*button\b|<\s*video\b|<\s*iframe\b/i.test(item.content);
+      }
+
+      function isCanvasPanTarget(target) {
+        if (!target) return false;
+        if (target.closest('.canvas-item')) return false;
+        if (target.closest('.canvas-header, .writing-panel')) return false;
+        return !!target.closest('.canvas-drop-zone');
+      }
+
+      function syncStickyNoteEditorsToItems() {
+        document.querySelectorAll('.sticky-note').forEach(wrapper => {
+          const id = wrapper.getAttribute('data-id');
+          const item = items.find(i => i.id === id);
+          if (!item || item.type !== 'sticky' || item.editable === false) return;
+
+          const editor = wrapper.querySelector('.sticky-note-editor');
+          if (editor) {
+            item.content = editor.value;
+            return;
+          }
+
+          const body = wrapper.querySelector('.sticky-note-body');
+          if (body) {
+            item.content = body.innerHTML;
+          }
+        });
+      }
+
       function applyZoom() {
         dropZone.style.transform = `scale(${currentZoom})`;
         updateZoomDisplay();
@@ -72,6 +112,7 @@
       // ---------- LOCAL STORAGE OPERATIONS ----------
       function saveItemsToStorage() {
         try {
+          syncStickyNoteEditorsToItems();
           localStorage.setItem(STORAGE_ITEMS, JSON.stringify(items));
         } catch (e) {
           console.warn('Failed to save items', e);
@@ -127,7 +168,7 @@
           saveStatus.innerHTML = '<i class="fas fa-check-circle"></i> saved';
           lastSavedText.textContent = `saved ${formatTime()}`;
         } else {
-          saveStatus.innerHTML = '📁 local';
+          saveStatus.innerHTML = 'ðŸ“ local';
         }
       }
 
@@ -165,7 +206,7 @@
           } else if (item.type === 'sticky') {
             wrapper.classList.add('sticky-note');
             wrapper.setAttribute('contenteditable', 'true');
-            wrapper.innerHTML = item.content || '📝 double-click to edit';
+            wrapper.innerHTML = item.content || 'ðŸ“ double-click to edit';
             wrapper.style.background = '#fef9c3';
             wrapper.style.color = '#1e1e2e';
             wrapper.style.fontSize = '16px';
@@ -203,8 +244,51 @@
         items = items.filter(item => item.id !== id);
         saveItemsToStorage();
         renderAllItems();
+        upgradeStickyNoteEditors();
       }
 
+      function upgradeStickyNoteEditors() {
+        document.querySelectorAll('.sticky-note').forEach(wrapper => {
+          if (wrapper.querySelector('.sticky-note-editor') || wrapper.querySelector('.sticky-note-body')) return;
+
+          const id = wrapper.getAttribute('data-id');
+          const item = items.find(i => i.id === id);
+          if (!item) return;
+
+          const deleteBtn = wrapper.querySelector('.delete-item-btn');
+          const rawContent = item.content || wrapper.textContent || '';
+          const isAudioNote = item.editable === false || /<\s*audio\b/i.test(rawContent);
+
+          wrapper.removeAttribute('contenteditable');
+          wrapper.contentEditable = 'false';
+          wrapper.innerHTML = '';
+
+          const handle = document.createElement('div');
+          handle.className = 'sticky-note-handle';
+          handle.innerHTML = '<i class="fas fa-grip-vertical"></i><span>drag</span>';
+          wrapper.appendChild(handle);
+
+          if (isAudioNote) {
+            const body = document.createElement('div');
+            body.className = 'sticky-note-body';
+            body.innerHTML = rawContent || '✨ new note';
+            wrapper.appendChild(body);
+          } else {
+            const editor = document.createElement('textarea');
+            editor.className = 'sticky-note-editor';
+            editor.value = rawContent || '✨ new note';
+            editor.spellcheck = false;
+            editor.addEventListener('input', () => {
+              item.content = editor.value;
+              saveItemsToStorage();
+            });
+            editor.addEventListener('blur', () => saveItemsToStorage());
+            wrapper.appendChild(editor);
+          }
+
+          if (deleteBtn) wrapper.appendChild(deleteBtn);
+        });
+      }
       function addItemToCanvas(itemData) {
         const canvasRect = canvasContainer.getBoundingClientRect();
         const scrollLeft = canvasContainer.scrollLeft;
@@ -221,6 +305,7 @@
         items.push(newItem);
         saveItemsToStorage();
         renderAllItems();
+        upgradeStickyNoteEditors();
       }
 
       function addImageFromFile(file) {
@@ -254,7 +339,7 @@
       }
 
       function addStickyNote() {
-        addItemToCanvas({ type: 'sticky', content: '✨ new note', width: 180, height: 120 });
+        addItemToCanvas({ type: 'sticky', content: 'âœ¨ new note', width: 180, height: 120 });
       }
 
       function handleImageFiles(files) {
@@ -293,12 +378,20 @@
       }
 
       function onItemMouseDown(e) {
+        if (e.target.closest('.delete-item-btn')) return;
+        const sticky = e.target.closest('.sticky-note');
+        if (sticky && !e.target.closest('.sticky-note-handle')) return;
+        if (e.target.closest('.sticky-note-editor, .sticky-note-body, textarea, audio, button, input, select, a')) return;
         e.preventDefault();
         e.stopPropagation();
         startDrag(e.currentTarget, e);
       }
 
       function onItemTouchStart(e) {
+        if (e.target.closest('.delete-item-btn')) return;
+        const sticky = e.target.closest('.sticky-note');
+        if (sticky && !e.target.closest('.sticky-note-handle')) return;
+        if (e.target.closest('.sticky-note-editor, .sticky-note-body, textarea, audio, button, input, select, a')) return;
         e.preventDefault();
         if (e.touches.length === 1) {
           startDrag(e.currentTarget, e.touches[0]);
@@ -353,8 +446,58 @@
         currentDragId = null;
       }
 
+      function startPan(eventOrTouch) {
+        const point = eventOrTouch.touches ? eventOrTouch.touches[0] : eventOrTouch;
+        isPanning = true;
+        panStartX = point.clientX;
+        panStartY = point.clientY;
+        panStartScrollLeft = canvasContainer.scrollLeft;
+        panStartScrollTop = canvasContainer.scrollTop;
+        canvasContainer.classList.add('panning');
+        window.addEventListener('mousemove', onPanMove);
+        window.addEventListener('mouseup', onPanEnd);
+        window.addEventListener('touchmove', onPanMove, { passive: false });
+        window.addEventListener('touchend', onPanEnd);
+        window.addEventListener('touchcancel', onPanEnd);
+      }
+
+      function onPanMove(e) {
+        if (!isPanning) return;
+        e.preventDefault();
+        const point = e.touches ? e.touches[0] : e;
+        const dx = point.clientX - panStartX;
+        const dy = point.clientY - panStartY;
+        canvasContainer.scrollLeft = panStartScrollLeft - dx;
+        canvasContainer.scrollTop = panStartScrollTop - dy;
+      }
+
+      function onPanEnd() {
+        isPanning = false;
+        canvasContainer.classList.remove('panning');
+        window.removeEventListener('mousemove', onPanMove);
+        window.removeEventListener('mouseup', onPanEnd);
+        window.removeEventListener('touchmove', onPanMove);
+        window.removeEventListener('touchend', onPanEnd);
+        window.removeEventListener('touchcancel', onPanEnd);
+      }
+
       // ---------- ZOOM & PAN (mouse wheel, pinch) ----------
       function setupZoomAndPan() {
+        canvasContainer.addEventListener('mousedown', (e) => {
+          if (!isCanvasPanTarget(e.target)) return;
+          if (e.button !== 0) return;
+          if (e.target.closest('.sticky-note-editor, .sticky-note-body, .sticky-note-handle, textarea, audio, button, input, select, a')) return;
+          e.preventDefault();
+          startPan(e);
+        });
+
+        canvasContainer.addEventListener('touchstart', (e) => {
+          if (e.touches.length !== 1) return;
+          if (!isCanvasPanTarget(e.target)) return;
+          if (e.target.closest('.sticky-note-editor, .sticky-note-body, .sticky-note-handle, textarea, audio, button, input, select, a')) return;
+          startPan(e);
+        }, { passive: false });
+
         canvasContainer.addEventListener('wheel', (e) => {
           e.preventDefault();
           const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
@@ -426,7 +569,7 @@
         saveStoryToStorage();
         lastSavedText.textContent = `saved ${formatTime()}`;
         saveStatus.innerHTML = '<i class="fas fa-check-circle"></i> saved';
-        setTimeout(() => { saveStatus.innerHTML = '📁 local'; }, 1500);
+        setTimeout(() => { saveStatus.innerHTML = 'ðŸ“ local'; }, 1500);
       }
 
       function selectAllStoryText() {
@@ -480,6 +623,7 @@
         loadStoryFromStorage();
         loadZoomFromStorage();
         renderAllItems();
+        upgradeStickyNoteEditors();
 
         storyTextarea.value = storyContent;
         storyTextarea.addEventListener('input', onStoryInput);
@@ -506,6 +650,7 @@
         setupZoomAndPan();
 
         window.addEventListener('beforeunload', () => {
+          saveItemsToStorage();
           saveStoryToStorage();
         });
 
@@ -515,3 +660,6 @@
 
       bootstrap();
     })();
+
+
+
